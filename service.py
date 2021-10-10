@@ -94,25 +94,25 @@ def refreshPrimaryVPNs():
 
     del primary_vpns[:]
     del primary_vpns_friendly[:]
-    
+
     # # Adjust 11 below if changing number of conn_max
     for i in range (1, 11):
         primary_vpns.append(addon.getSetting(str(i)+"_vpn_validated"))
         primary_vpns_friendly.append(addon.getSetting(str(i)+"_vpn_validated_friendly"))
     return
 
-    
+
 def refreshPlatformInfo():
     # Write the platform so that options only appear in the settings menu when relevant
     addon.setSetting("platform", str(getPlatform()))
-    
+
     # Determine if systemd is available so that extra options appear in the settings menu
     if supportSystemd():
         new_sysd = "true"
     else:
         new_sysd = "false"
     addon.setSetting("show_preboot_connect", new_sysd)
-    
+
     # Some tracing that we might want to do
     if xbmcvfs.exists(getUserDataPath("JSONTRACE.txt")):
         addon.setSetting("vpn_enable_json", "true")
@@ -122,7 +122,7 @@ def refreshPlatformInfo():
 def checkConnections():
     # Check that all of the connections exist
     # Adjust 11 below if changing number of conn_max
-    for i in range (1, 11):        
+    for i in range (1, 11):
         next_conn = (addon.getSetting(str(i)+"_vpn_validated"))
         if not next_conn == "" and not xbmcvfs.exists(next_conn):
             errorTrace("service.py", "Checking connections and couldn't find connection " + str(i) + ", " + next_conn)
@@ -141,12 +141,12 @@ def waitForAbort( time ):
     if not abort: xbmc.sleep(time)
     return abort
 
-    
+
 def abortRequested():
     return abort
 
-    
-# Monitor class which will get called when the settings change    
+
+# Monitor class which will get called when the settings change
 class KodiMonitor(xbmc.Monitor):
 
     # This gets called every time a setting is changed either programmatically or via the settings dialog.
@@ -157,7 +157,7 @@ class KodiMonitor(xbmc.Monitor):
         if accepting_changes and configUpdate():
             debugTrace("Requested update to service process via settings monitor")
             updateService("KodiMonitor")
-    
+
     # Intercept all notifications and deal with a couple of them
     def onNotification( self, sender, method, data):
         global abort
@@ -169,11 +169,11 @@ class KodiMonitor(xbmc.Monitor):
         if method == "System.OnQuit":
             debugTrace("Received a quit notification")
             abort = True
-            
 
-# Player class which will get called when a video starts/stops            
+
+# Player class which will get called when a video starts/stops
 class KodiPlayer(xbmc.Player):
-    
+
     def __init__ (self):
         xbmc.Player.__init__(self)
         self.logger = None
@@ -203,39 +203,39 @@ class KodiPlayer(xbmc.Player):
         except Exception as e:
             # This is a pass because in some circumstances, the file name can be unavailable and we'll end up here
             pass
-        
+
 # Probably don't need to do this, but I'm hoping it introduces an element of randomness during install
 # so that the running() check isn't perfectly synced with another task running at the same time
-if xbmcvfs.exists(getAddonPath(True, "INSTALL.txt")): stopVPNConnection() 
+if xbmcvfs.exists(getAddonPath(True, "INSTALL.txt")): stopVPNConnection()
 
-if __name__ == '__main__' and not running():   
+if __name__ == '__main__' and not running():
 
     # This and the running() check above is to work around a Kodi 17 bug that starts a service twice after install
     setRunning(True)
-    
+
     shutdown = False
     stop_vpn = False
 
     # Put the Kodi version on the home window in case it's needed to change behaviour for different levels
     xbmcgui.Window(10000).setProperty("VPN_Manager_Kodi_Version", xbmc.getInfoLabel('System.BuildVersionShort'))
-    
+
     # Trace that the service has started
     infoTrace("service.py", "Starting VPN monitor service, platform is " + str(getPlatform()) + ", version is " + addon.getAddonInfo("version"))
     infoTrace("service.py", "Kodi build is " + xbmc.getInfoLabel('System.BuildVersion'))
     infoTrace("service.py", "Addon path is " + getAddonPath(True, ""))
-    
+
     # Initialise the monitor classes
     monitor = KodiMonitor()
-    player = KodiPlayer() 
-    
+    player = KodiPlayer()
+
     # Initialise some variables we'll be using repeatedly
     addon = xbmcaddon.Addon()
     filters = VPNAPI()
-    
+
     if not xbmcvfs.exists(getAddonPath(True, "connect.py")):
         xbmcgui.Dialog().ok(addon_name, "You've installed " + addon_short + " incorrectly and the add-on won't work.  Check the log, install a Github released build or install from the repository.")
         errorTrace("service.py", "Install is in the wrong place, expecting to find the add-on installed in " + getAddonPath(True,""))
-    
+
     # See if this is a new install...we might want to do things here
     if xbmcvfs.exists(getAddonPath(True, "INSTALL.txt")):
         xbmcvfs.delete(getAddonPath(True, "INSTALL.txt"))
@@ -297,9 +297,9 @@ if __name__ == '__main__' and not running():
                 if getPlatform() == platforms.WINDOWS or addon.getSetting("openvpn_no_path") == "true":
                     addon.setSetting("openvpn_no_path", "true")
                     addon.setSetting("openvpn_path", "")
-                    
+
         addon.setSetting("version_number", addon.getAddonInfo("version"))
-   
+
     # If the addon was running happily previously (like before an uninstall/reinstall or update)
     # then regenerate the OVPNs for the validated provider.
     primary_path = addon.getSetting("1_vpn_validated")
@@ -311,7 +311,7 @@ if __name__ == '__main__' and not running():
     if not primary_path == "" and not xbmcvfs.exists(primary_path):
         vpn_provider = getVPNLocation(addon.getSetting("vpn_provider_validated"))
         infoTrace("service.py", "New install, but was using good VPN previously (" + vpn_provider + ", " + primary_path + ").  Regenerate OVPNs")
-        
+
         if not isAlternative(vpn_provider):
             populateSupportingFromGit(vpn_provider)
             if not checkDirectory(vpn_provider) or not fixOVPNFiles(vpn_provider, addon.getSetting("vpn_locations_list")) or not checkConnections():
@@ -325,11 +325,11 @@ if __name__ == '__main__' and not running():
                 errorTrace("service.py", "VPN connection is not available for " + vpn_provider + " with list " + addon.getSetting("vpn_locations_list") + ", need to revalidate")
                 removeGeneratedFiles()
                 resetVPNConfig(addon, 1)
-        
-            
+
+
     # Make sure the right options appear in the settings menu
-    refreshPlatformInfo()        
-            
+    refreshPlatformInfo()
+
     # This will adjust the system time on Linux platforms if it's too far adrift from reality
     if getPlatform() == platforms.LINUX and addon.getSetting("fix_system_time") == "true":
         curr_time = now()
@@ -337,7 +337,7 @@ if __name__ == '__main__' and not running():
         if last_conn_time > curr_time:
             infoTrace("service.py", "System time was in the past, updating it to " + datetime.datetime.fromtimestamp(last_conn_time).strftime('%Y-%m-%d %H:%M:%S'))
             updateSystemTime(last_conn_time)
-            
+
     # Store the boot time and update the reboot reason
     addon.setSetting("boot_time", time.strftime('%Y-%m-%d %H:%M:%S'))
     addon.setSetting("last_boot_reason", addon.getSetting("boot_reason"))
@@ -347,19 +347,19 @@ if __name__ == '__main__' and not running():
 
     # Check the keymaps for this add-on are intact
     if fixKeymaps():
-        xbmcgui.Dialog().ok(addon_name, "The keymap for this add-on had been renamed.  It's been fixed now but you must restart for the keymap to take effect.") 
-        
+        xbmcgui.Dialog().ok(addon_name, "The keymap for this add-on had been renamed.  It's been fixed now but you must restart for the keymap to take effect.")
+
     # Determine whether generation of VPN files is enabled
     if generateVPNs():
         addon.setSetting("allow_vpn_generation", "true")
     else:
         addon.setSetting("allow_vpn_generation", "false")
-    
+
     addon = xbmcaddon.Addon()
-    
+
     # Need to go and request the main loop fetches the settings
     updateService("service initialisation")
-    
+
     reconnect_vpn = False
     warned_monitor = False
     if addon.getSetting("monitor_paused") == "true":
@@ -367,7 +367,7 @@ if __name__ == '__main__' and not running():
     else:
         warned_monitor = True
         setVPNMonitorState("Started")
-        
+
     connect_on_boot_setting = addon.getSetting("vpn_connect_before_boot")
     connect_on_boot_ovpn = addon.getSetting("1_vpn_validated")
 
@@ -382,44 +382,44 @@ if __name__ == '__main__' and not running():
         infoTrace("service.py", "Delaying all VPN connections for " + str(connect_delay) + " seconds")
         xbmcgui.Dialog().notification(addon_name, "Delaying start for " + str(connect_delay) + " seconds.", getAddonPath(True, "/resources/paused.png"), 5000, False)
         xbmc.sleep(connect_delay*1000)
-    
+
     # Timer values in seconds
     connection_retry_time_min = int(addon.getSetting("vpn_reconnect_freq"))
     connection_retry_time = connection_retry_time_min
     timer = 0
     cycle_timer = 0
     last_file_check_time = 0
-    
+
     last_cycle = ""
     delay_min = 2
     delay_max = 4
     delay = delay_max
     connection_errors = 0
     stop = False
-    
+
     last_window_id = 0
 
     vpn_setup = True
     vpn_provider = ""
     playing = False
-    
+
     accepting_changes = True
-    
+
     # If no connection has been set up, offer to run the wizard
     if (not connectionValidated(addon)) and addon.getSetting("vpn_wizard_enabled") == "true":
         state = suspendStartStop()
         wizard()
         resumeStartStop(state)
-    
+
     addon = xbmcaddon.Addon()
     while not abortRequested():
-    
+
         if stopRequested() or stop:
             if not stop:
                 # Acknowledge that we've stopped so that the config can do things
                 # Also shorten the delay so that we can be more responsive and kill any cycle attempt
                 debugTrace("Service received a stop request")
-                ackStop()                
+                ackStop()
                 stop = True
                 accepting_changes = False
                 delay = delay_min
@@ -427,11 +427,11 @@ if __name__ == '__main__' and not running():
             elif startRequested():
                 debugTrace("Service received a start request")
                 # When we're told we can start again, acknowledge that and reset the delay back up.
-                ackStart()                
+                ackStart()
                 stop = False
                 accepting_changes = True
-                delay = delay_max               
-        else:   
+                delay = delay_max
+        else:
             # See if there's been an update requested from the main add-on
             if updateServiceRequested():
                 # Need to get the addon again to ensure the updated settings are picked up
@@ -447,7 +447,7 @@ if __name__ == '__main__' and not running():
 
                 # Update the platform settings to make the right options appear
                 refreshPlatformInfo()
-                
+
                 # See if the primary VPN Or boot setting has changed.  If it has, systemd needs fixing
                 if (addon.getSetting("vpn_connect_at_boot") == "false" and connect_on_boot_setting == "true"):
                     addon.setSetting("vpn_connect_before_boot", "false")
@@ -459,7 +459,7 @@ if __name__ == '__main__' and not running():
                     if connect_on_boot_setting == "true" and (not connect_on_boot_ovpn == ""):
                         copySystemdFiles()
                         addSystemd()
-                
+
                 # Determine if the VPN has been set up
                 if primary_vpns[0] == "":
                     debugTrace("Found no VPNs, setup is invalid")
@@ -480,13 +480,13 @@ if __name__ == '__main__' and not running():
                 # Flag that filter and VPN lists have changed
                 debugTrace("Flag lists have changed")
                 xbmcgui.Window(10000).setProperty("VPN_Manager_Lists_Last_Refreshed", str(now()))
-                
+
                 # (Re)set the reconnect time of the existing connection
                 if getVPNState() == "started":
                     r = int(addon.getSetting("auto_reconnect_vpn"))
                     if r == 0 and getReconnectTime() > 0: setReconnectTime(addon, now())
                     elif r > 0 and getReconnectTime() == 0: setReconnectTime(addon, now())
-                
+
                 # If the VPN is not deliberately disconnected, then connect it
                 if vpn_setup and not getVPNState() == "off":
                     if getVPNState() == "started":
@@ -519,8 +519,8 @@ if __name__ == '__main__' and not running():
                                     notification_title = addon_name
                                     if fakeConnection():
                                         icon = "/resources/faked.png"
-                                    else:                                        
-                                        icon = "/resources/connected.png"                                        
+                                    else:
+                                        icon = "/resources/connected.png"
                                         if checkForVPNUpdates(getVPNLocation(addon.getSetting("vpn_provider_validated")), True):
                                             notification_title = addon_short + ", update available"
                                             icon = "/resources/update.png"
@@ -545,16 +545,16 @@ if __name__ == '__main__' and not running():
                                     setVPNLastConnectedProfile("")
                                     setVPNLastConnectedProfileFriendly("")
                                     reconnect_vpn = True
-                            else: 
+                            else:
                                 # Not connecting at boot or not set up yet
-                                setVPNState("off") 
+                                setVPNState("off")
                         elif getConnectionErrorCount() == 0:
                             # Unknown state, and not in an error retry cycle, so try and reconnect immediately
                             debugTrace("Unknown VPN state so forcing reconnect")
                             reconnect_vpn = True
                 # Sleep before accepting changes just in case there are callbacks to the settings monitor outstanding
                 xbmc.sleep(1000)
-                accepting_changes = True                        
+                accepting_changes = True
 
             # This forces a connection validation after something stops playing
             if player.isPlaying():
@@ -562,8 +562,8 @@ if __name__ == '__main__' and not running():
             elif playing:
                 playing = False
                 timer = connection_retry_time + 1
-                                        
-            # This checks the connection is still good.  It will always do it whilst there's 
+
+            # This checks the connection is still good.  It will always do it whilst there's
             # no playback but there's an option to suppress this during playback
             try:
                 addon = xbmcaddon.Addon()
@@ -595,15 +595,15 @@ if __name__ == '__main__' and not running():
                     addon = xbmcaddon.Addon()
                     connection_retry_time_min = int(addon.getSetting("vpn_reconnect_freq"))
                     timer = 0
-            
+
             # Check to see if a reconnect is needed
-            if (not playing) and vpn_setup: 
-                rt = getReconnectTime()                
+            if (not playing) and vpn_setup:
+                rt = getReconnectTime()
                 if rt > 0:
                     if getVPNState() == "started" and isVPNConnected() and rt < now():
                         debugTrace("Reconnecting as connection has been alive for " + addon.getSetting("auto_reconnect_vpn") + " hours")
                         forceReconnect("True")
-            
+
             # This will force a reconnect to happen, unless the VPN state is off
             if isForceReconnect() and not (getVPNState() == "off"):
                 forceReconnect("")
@@ -615,40 +615,40 @@ if __name__ == '__main__' and not running():
                 setVPNProfile("")
                 setVPNProfileFriendly("")
                 reconnect_vpn = True
-    
+
             # Fetch the path and name of the current addon and the current active window
             current_path = xbmc.getInfoLabel("Container.FolderPath")
             current_name = xbmc.getInfoLabel("Container.FolderName")
             current_window_id = xbmcgui.getCurrentWindowId()
-            
+
             try_to_filter = False
-            
+
             # See if the window ID has changed since last time
             if not current_window_id == last_window_id:
                 if addon.getSetting("display_window_id") == "true":
                     xbmcgui.Dialog().notification(addon_name, "Window ID is now " + str(current_window_id), getAddonPath(True, "/resources/display.png"), 5000, False)
                     infoTrace("service.py", "Window ID is now " + str(current_window_id))
-                debugTrace("Encountered a new window ID " + str(current_window_id)) 
-                debugTrace("Previous window ID was " + str(last_window_id)) 
+                debugTrace("Encountered a new window ID " + str(current_window_id))
+                debugTrace("Previous window ID was " + str(last_window_id))
                 last_window_id = current_window_id
                 try_to_filter = True
 
             # See if the addon name has changed since last time.  Check for current_name being blank for
             # when an addon uses a window with no name (like when it's playing back video)
             if (not xbmcgui.Window(10000).getProperty(last_addon) == current_name) and (not current_name == ""):
-                debugTrace("Encountered a new addon " + current_path + " " + current_name)  
-                debugTrace("Previous addon was " + (xbmcgui.Window(10000).getProperty(last_addon)))    
+                debugTrace("Encountered a new addon " + current_path + " " + current_name)
+                debugTrace("Previous addon was " + (xbmcgui.Window(10000).getProperty(last_addon)))
                 xbmcgui.Window(10000).setProperty(last_addon, current_name)
                 try_to_filter = True
-                
+
             # Filter on the window ID and name to see if the VPN connection should change
             if vpn_setup and try_to_filter:
                 if isVPNMonitorRunning():
                     # If the monitor is paused, we want to warn
-                    warned_monitor = False            
+                    warned_monitor = False
                     # See if we should be filtering this addon
                     # -1 is no, 0 is disconnect, >0 is specific VPN
-                    filter = filters.isFiltered(current_path, current_window_id)                
+                    filter = filters.isFiltered(current_path, current_window_id)
                     if filter == 0:
                         # Don't need a VPN, so disconnect if a VPN is running
                         if getVPNState() == "started":
@@ -667,9 +667,9 @@ if __name__ == '__main__' and not running():
                             reconnect_vpn = True
                     elif filter > 0:
                         # Connect to a specific VPN providing we're not connected already
-                        if (not primary_vpns[(filter-1)] == getVPNProfile()) or not isVPNConnected():                        
+                        if (not primary_vpns[(filter-1)] == getVPNProfile()) or not isVPNConnected():
                             infoTrace("service.py", "VPN filter " + primary_vpns[(filter-1)] + " found for window " + str(current_window_id) + " or addon " + current_name)
-                            if not primary_vpns[(filter-1)] == "":                                
+                            if not primary_vpns[(filter-1)] == "":
                                 debugTrace("Switching from " + getVPNProfile() + " to " + primary_vpns[(filter-1)])
                                 setVPNRequestedProfile(primary_vpns[(filter-1)])
                                 setVPNRequestedProfileFriendly(primary_vpns_friendly[(filter-1)])
@@ -706,9 +706,9 @@ if __name__ == '__main__' and not running():
                                         setVPNLastConnectedProfileFriendly("")
                                         reconnect_vpn = True
                                 else:
-                                    # We're connected, but who knows to what.  If we've got a last connected set then reconnect 
-                                    # to that, otherwise just check we're still connected to what we think we are                            
-                                    if not getVPNLastConnectedProfile() == "":                                
+                                    # We're connected, but who knows to what.  If we've got a last connected set then reconnect
+                                    # to that, otherwise just check we're still connected to what we think we are
+                                    if not getVPNLastConnectedProfile() == "":
                                         if not getVPNProfile() == getVPNLastConnectedProfile() or not isVPNConnected():
                                             debugTrace("Connected, but attempting reconnect to previous VPN" + getVPNLastConnectedProfile() + ", currently " + getVPNProfile())
                                             setVPNRequestedProfile(getVPNLastConnectedProfile())
@@ -737,9 +737,9 @@ if __name__ == '__main__' and not running():
                                             else:
                                                 # Reconnect to current profile
                                                 setVPNRequestedProfile(getVPNProfile())
-                                                setVPNRequestedProfileFriendly(getVPNProfileFriendly())                                                                                
+                                                setVPNRequestedProfileFriendly(getVPNProfileFriendly())
                                                 setVPNProfile("")
-                                                setVPNProfileFriendly("")                                     
+                                                setVPNProfileFriendly("")
                 else:
                     # Monitor is paused, warn user if not done so previously
                     if not warned_monitor:
@@ -776,7 +776,7 @@ if __name__ == '__main__' and not running():
                 elif api_command == "GetIP":
                     updateIPInfo(addon)
                 else:
-                    # Connect command is basically the profile name...any errors will 
+                    # Connect command is basically the profile name...any errors will
                     # be filtered in the api.py code before the command is passed to here
                     setVPNRequestedProfile(api_command)
                     setVPNRequestedProfileFriendly(getFriendlyProfileName(api_command))
@@ -784,7 +784,7 @@ if __name__ == '__main__' and not running():
                 updateAPITimer()
                 clearAPICommand()
 
-                        
+
             # See if the addon is requesting to cycle through the VPNs
             cycle_requested = getVPNCycle()
             if vpn_setup and not cycle_requested == "":
@@ -792,13 +792,13 @@ if __name__ == '__main__' and not running():
                 # Wait a short period, and then just grab the lock anyway.
                 forceCycleLock()
                 debugTrace("Got forced cycle lock in cycle part of service, cycle is " + cycle_requested)
-                
+
                 # Reset the timer if this is a different request than last time we looked
                 if not cycle_requested == last_cycle:
                     debugTrace("New Cycling VPN connection " + cycle_requested)
                     last_cycle = cycle_requested
                     cycle_timer = 0
-                
+
                 # Increment cycle counter so that user has the chance to cycle multiple times before connection
                 cycle_timer = cycle_timer + delay
 
@@ -808,7 +808,7 @@ if __name__ == '__main__' and not running():
                     if not (cycle_requested == "Disconnect" and getVPNProfile() == "") and (not cycle_requested == getVPNProfile()):
                         # A reconnect request is the profile name prefixed with an explanation mark
                         # Need to force a reconnect by pretending it's not currently got a connection
-                        if cycle_requested.startswith("!"): 
+                        if cycle_requested.startswith("!"):
                             cycle_requested = cycle_requested[1:]
                             setVPNProfile("")
                             setVPNProfileFriendly("")
@@ -840,30 +840,30 @@ if __name__ == '__main__' and not running():
                             xbmcgui.Dialog().notification(notification_title, "Connected to "+ getVPNProfileFriendly() + " via Service Provider " + isp + " in " + country + ". IP is " + ip + ".", getAddonPath(True, icon), 20000, False)
                     clearVPNCycle()
                     cycle_timer = 0
-                freeCycleLock()    
-                
+                freeCycleLock()
+
             # Somewhere above we've requested we mess with the connection...
             if vpn_setup and reconnect_vpn:
                 addon = xbmcaddon.Addon()
                 debugTrace("Running VPN (dis)connect request " + getVPNRequestedProfile() + ", current is " + getVPNProfile())
-                
+
                 # Wait a short period, and then just grab the lock anyway.
                 forceCycleLock()
                 debugTrace("Got forced cycle lock in connection part of service")
-                
+
                 # Stop the VPN and reset the connection timer
                 # Suppress a reconnection to the same unless it's become disconnected
-                if (not getVPNRequestedProfile() == getVPNProfile()) or (getVPNRequestedProfile() == getVPNProfile() and not isVPNConnected()):                    
-                
+                if (not getVPNRequestedProfile() == getVPNProfile()) or (getVPNRequestedProfile() == getVPNProfile() and not isVPNConnected()):
+
                     # Stop any streams playing
-                    if player.isPlaying(): 
+                    if player.isPlaying():
                         filename = player.getPlayingFile()
-                        debugTrace("File " + filename + " is playing")                        
+                        debugTrace("File " + filename + " is playing")
                         if addon.getSetting("vpn_stop_media") == "true":
                             if streaming:
-                                infoTrace("service.py", "Stopping " + filename + " to change the VPN connection state")                        
+                                infoTrace("service.py", "Stopping " + filename + " to change the VPN connection state")
                                 player.stop()
-                                
+
                     # Stop any existing VPN
                     debugTrace("Stopping VPN before any new connection attempt")
                     prev_connection = "Unknown"
@@ -880,16 +880,16 @@ if __name__ == '__main__' and not running():
                         # Just incase we're in a weird unknown state, this should clear things up
                         stopVPNConnection()
                         debugTrace("Unconnected state, " + getVPNState() + " so disconnected anyway")
-                    
+
                     timer = 0
-                
+
                     # Don't reconnect if this is a disconnect request, or there is nothing to connect to (primary not set)
                     if not getVPNRequestedProfile() == "Disconnect":
                         if not getVPNRequestedProfile() == "":
                             debugTrace("Connecting to VPN profile " + getVPNRequestedProfile())
                             xbmcgui.Dialog().notification(addon_name, "Connecting to "+ getVPNRequestedProfileFriendly(), getAddonPath(True, "/resources/locked.png"), 10000, False)
                             vpn_provider = addon.getSetting("vpn_provider_validated")
-                            # Clear the server name so that the alternative 
+                            # Clear the server name so that the alternative
                             setVPNURL("")
                             if isAlternative(vpn_provider):
                                 # (Re)generate the ovpn file and user credentials based on the latest server settings
@@ -912,7 +912,7 @@ if __name__ == '__main__' and not running():
                                     xbmcgui.Dialog().notification(addon_name, "Error authenticating with VPN, retry or update credentials.", getAddonPath(True, "/resources/warning.png"), 10000, True)
                                 elif state == connection_status.FILE_ERROR:
                                     # If the ovpn file doesn't exist, we shouldn't retry
-                                    xbmcgui.Dialog().notification(addon_name, "Error connecting, review log for errors.", getAddonPath(True, "/resources/warning.png"), 10000, True)                             
+                                    xbmcgui.Dialog().notification(addon_name, "Error connecting, review log for errors.", getAddonPath(True, "/resources/warning.png"), 10000, True)
                                 else:
                                     connection_errors = getConnectionErrorCount() + 1
                                     failover_connection = -1
@@ -952,7 +952,7 @@ if __name__ == '__main__' and not running():
                                             dialog_text = "Bad connectivity with VPN"
                                         dialog_text = dialog_text + ", retrying in " + str((connection_retry_time/60)) + " minutes."
                                         xbmcgui.Dialog().notification(addon_name, dialog_text, getAddonPath(True, "/resources/warning.png"), 10000, True)
-                                            
+
                                     setConnectionErrorCount(connection_errors)
                                     timer = 1
                                 # Want to kill any running process if it's not completed successfully
@@ -973,7 +973,7 @@ if __name__ == '__main__' and not running():
                                 if getVPNURL() == "":
                                     setVPNURL(getVPNServerFromFile(getVPNProfile()))
                                 vpn_provider = getVPNLocation(addon.getSetting("vpn_provider_validated"))
-                                notification_title = addon_name                               
+                                notification_title = addon_name
                                 if fakeConnection():
                                     icon = "/resources/faked.png"
                                 else:
@@ -985,7 +985,7 @@ if __name__ == '__main__' and not running():
                                     elif isDeprecated():
                                         notification_title = addon_short + ", deprecated VPN"
                                         icon = "/resources/deprecated.png"
-                                        notification_time = 8000                                    
+                                        notification_time = 8000
                                 if isAlternative(vpn_provider):
                                     str_last_time = addon.getSetting("alternative_message_time")
                                     try:
@@ -997,7 +997,7 @@ if __name__ == '__main__' and not running():
                                     last_id = addon.getSetting("alternative_message_token")
                                     new_id, new_message = getAlternativeMessages(vpn_provider, last_time, last_id)
                                     if not new_message == "":
-                                        xbmcgui.Dialog().ok(addon_name, new_message) 
+                                        xbmcgui.Dialog().ok(addon_name, new_message)
                                         addon.setSetting("alternative_message_time", str(now()))
                                         addon.setSetting("alternative_message_token", new_id)
                                 addon = xbmcaddon.Addon()
@@ -1007,33 +1007,35 @@ if __name__ == '__main__' and not running():
                                     _, ip, country, isp = getIPInfo(addon)
                                     xbmcgui.Dialog().notification(notification_title, "Connected to "+ getVPNProfileFriendly() + " via Service Provider " + isp + " in " + country + ". IP is " + ip + ".", getAddonPath(True, icon), 20000, False)
                                 else:
-                                    xbmcgui.Dialog().notification(notification_title, "Connected to "+ getVPNProfileFriendly(), getAddonPath(True, icon), notification_time, False)
+                                    server = getVPNURL()
+                                    if not server == "": server = " (" + server + ")"
+                                    xbmcgui.Dialog().notification(notification_title, "Connected to "+ getVPNProfileFriendly() + server, getAddonPath(True, icon), notification_time, False)
                                 if isAlternative(vpn_provider) and not getVPNServer() == "":
                                     infoTrace("service.py", "VPN connected to " + getVPNProfileFriendly() + " using " + getVPNServer())
                                 else:
                                     infoTrace("service.py", "VPN connected to " + getVPNProfileFriendly())
                         else:
                             errorTrace("service.py", "Asking to connect to a VPN profile that doesn't exist")
-                    else:                                               
+                    else:
                         setConnectionErrorCount(0)
                         setVPNState("off")
-                
+
                 # Reset a bunch of things if we've connected/disconnected successfully
-                if timer == 0:                    
+                if timer == 0:
                     setConnectionErrorCount(0)
                     setVPNRequestedProfile("")
                     setVPNRequestedProfileFriendly("")
                     clearVPNCycle()
                     connection_retry_time = connection_retry_time_min
-                
+
                 # Clear any outstanding API that may have come in during the connection
                 clearAPICommand()
-                
+
                 # Let the cycle code run again
                 freeCycleLock()
-                
+
                 reconnect_vpn = False
-        
+
         # Take multiple second long naps, checking to see if there are any outstanding CLI commands
         shutdown = False
         stop_vpn = False
@@ -1049,15 +1051,15 @@ if __name__ == '__main__' and not running():
                 infoTrace("service.py", "Abort requested, shutting down service")
                 shutdown = True
                 break
-            if not getAPICommand() == "": 
+            if not getAPICommand() == "":
                 break
         if shutdown: break
-        
+
         timer = timer + delay
-    
+
     # Work around Kodi 17 bug that starts a service twice in some cases...
     setRunning(False)
     xbmc.sleep(500)
-    
+
     # Stop the VPN connection before exiting as it could be running on a 'normal' PC, not a dedicated box
     if stop_vpn: stopVPNConnection()
